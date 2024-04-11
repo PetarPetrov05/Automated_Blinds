@@ -1,0 +1,277 @@
+#include "Arduino.h"
+#include "uRTCLib.h"
+//#include "uEEPROMLib.h"
+  char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+  uRTCLib rtc(0x68);
+  //uEEPROMLib eeprom(0x57);
+  int relay2 = 10;
+  int relay = 8;
+  unsigned long currTimeArduino=0;
+  unsigned long waitingTime= 1350000;//22.5 minutes
+  int endH = 16;//16
+  int endM = 20;//20
+  int inttmp = 0;
+  
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  delay(3000); 
+  
+  URTCLIB_WIRE.begin();
+ // rtc.set(50, 34, 20, 3, 12, 12, 23);
+  // rtc.set(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay,OUTPUT);
+  digitalWrite(relay,LOW);
+  digitalWrite(relay2,LOW);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  rtc.refresh();
+  Serial.print(rtc.month());
+  Serial.print(":");
+  Serial.print(rtc.day());
+  Serial.print(":");
+  Serial.print(rtc.hour());
+  Serial.print(":");
+  Serial.print(rtc.minute());
+  Serial.print(":");
+  Serial.print(rtc.second());
+  Serial.println("-----------");
+  delay(2000);
+  
+  
+  int currDay = rtc.day();
+  int currHours = rtc.hour();
+  int currMinutes = rtc.minute();
+  if(currHours >= 7 && currHours < 16){
+
+    IfPowerOffed();
+    if (currHours < 8){
+      Minutes10Cicles();
+      Continue();
+    }else{
+      Continue();
+    }
+  }
+
+}
+void inStartPosition(){
+  int count = 0;
+  while (count < 30){
+    oneTimeBackwardsFast();
+    count++;
+  }
+}
+
+void Minutes10Cicles(){
+  rtc.refresh();
+  int currDay = rtc.day();
+  int currHours = rtc.hour();
+  int currMinutes = rtc.minute();
+  int resM = 60 - currMinutes;
+  Serial.print("predi zakruglqne");
+  Serial.println(resM);
+  //opravi go
+  // while(resM %10 == 0){
+  //   resM++;
+  // }
+  Serial.print("sled zakruglqne");
+  Serial.println(resM);
+  int resultTimes = resM/10;
+  int waitingTime2 = (60 - currMinutes)/resultTimes;
+  unsigned long currTime=millis();
+  unsigned long previousTime=millis();
+  int counter = 0;
+  // // int countForFour = 0;
+  // // while(countForFour<2){
+  // //   digitalWrite(relay2,HIGH);
+  // //   delay(200);
+  // //   digitalWrite(relay2,LOW);
+  // //   delay(10000);
+  // //   countForFour++;
+  // // }
+  // while(counter<resultTimes){
+  //     currTime = millis();
+  //   unsigned long calcWaitTime =  waitingTime2* 60000;
+  //   if (currTime - previousTime >= calcWaitTime) 
+  //   {
+
+  //     digitalWrite(relay2,HIGH);
+  //     delay(200);
+  //     digitalWrite(relay2,LOW);
+  //     delay(10000);
+        
+  //     digitalWrite(relay2,HIGH);
+  //     delay(200);
+  //     digitalWrite(relay2,LOW);
+  //     previousTime = currTime;
+  //     counter++;
+  //   }
+  //}
+  unsigned long currTimeHour = millis();
+  unsigned long previousTimeHour = millis();
+  for(int i = 0 ; i < 12 ; i++){
+    digitalWrite(relay2,HIGH);
+    delay(200);
+    digitalWrite(relay2,LOW);
+    delay(10000);
+  }
+  while(currTimeHour - previousTimeHour >= 3600000){ // 1 hour
+    currTimeHour = millis();
+  }
+  for(int i = 0 ; i < 8;i++){
+    digitalWrite(relay,HIGH);
+    delay(200);
+    digitalWrite(relay,LOW);
+    delay(10000);
+  }
+   
+} 
+
+void Continue(){
+  rtc.refresh();
+  Serial.println("tyk");
+  int currDay = rtc.day();
+  int currHours = rtc.hour();
+  int currMinutes = rtc.minute();
+  int resH = 0;
+  int resM = 0;
+  int result = 0;
+  if (currHours>endH){
+    resH = currHours - endH;
+  }else{
+    resH = endH - currHours;
+  }
+  if (currMinutes>endM){
+    resM = (60 - currMinutes) + endM;
+    //resM = currMinutes - endM; 
+  }else{
+    resM = endM - currMinutes;
+  }
+  result = (resH*60 + resM)/22;
+    Serial.println(resH);
+    Serial.println(resM);
+    Serial.println(currMinutes);
+    Serial.println(result);
+    int count = 0;
+    while(count<result){
+      Serial.println(count);
+      oneTimeSlow();
+      count++;
+    }
+    for(int i = 0 ; i < 12 ; i++){
+      digitalWrite(relay,HIGH);
+      delay(200);
+      digitalWrite(relay,LOW);
+      delay(10000);
+    }
+    unsigned long currTimeHour = millis();
+    unsigned long previousTimeHour = millis();
+    while(currTimeHour - previousTimeHour >= 7200000){
+      currTimeHour = millis();
+    }
+    inStartPosition();
+}
+//#define seconds(secs) secs * 1000
+
+void IfPowerOffed(){
+  rtc.refresh();
+  int currDay = rtc.day();
+  int currHours = rtc.hour();
+  int currMinutes = rtc.minute();
+  
+  if (currHours >= 7){
+    int countBackwards =0;
+    unsigned long currTime=millis();
+    unsigned long previousTime=millis();
+    while(countBackwards<30)//30
+      {
+       currTime = millis();
+
+       if (currTime - previousTime >= 10000) 
+       {
+         Serial.println("here backwards");
+         Serial.println(countBackwards);
+         digitalWrite(relay,HIGH);
+         delay(200);
+         digitalWrite(relay,LOW);
+         countBackwards++;
+         previousTime = currTime;
+       }
+     }
+  
+    rtc.refresh();
+    currDay = rtc.day();
+    currHours = rtc.hour();
+    currMinutes = rtc.minute();
+    int TimesH = 0;
+    int TimesM = 0;
+    int TimesResult = 0;
+
+    TimesH = currHours-8;
+    if (currHours >=7 && currHours < 8){
+      TimesM = currMinutes/10;
+      TimesResult = (TimesH+1)*3 + TimesM;
+    }else {
+      TimesM = currMinutes/22;
+      TimesResult = TimesH*3 + TimesM + 10;//plus 6 bc of the first hour
+    }
+      int count = 0;
+      while(count<TimesResult){
+       oneTimeFast();
+       count++;
+      }
+  }
+}
+void oneTimeSlow(){
+  rtc.refresh();
+  currTimeArduino = millis();
+  unsigned long lastTime=millis();
+  Serial.println("bavno");
+  while(true){
+    currTimeArduino=millis();
+    Serial.println(currTimeArduino - lastTime);
+     if (currTimeArduino - lastTime >= waitingTime ){
+       Serial.println("4akame");
+        digitalWrite(relay2,HIGH);
+        delay(200);
+        digitalWrite(relay2,LOW);
+        lastTime = currTimeArduino;
+        break;
+     }
+  }
+}
+void oneTimeFast(){
+  
+  currTimeArduino = millis();
+  unsigned long lastTime=millis();
+  Serial.println("here");
+  while(true){
+    currTimeArduino=millis();
+     if (currTimeArduino - lastTime >= 10000 ){
+        digitalWrite(relay2,HIGH);
+        delay(200);
+        digitalWrite(relay2,LOW);
+        lastTime = currTimeArduino;
+        break;
+     }
+  }
+}
+void oneTimeBackwardsFast(){
+  currTimeArduino = millis();
+  unsigned long lastTime=millis();
+  Serial.println("hereback");
+  while(true){
+    currTimeArduino=millis();
+     if (currTimeArduino - lastTime >= 10000 ){
+        digitalWrite(relay,HIGH);
+        delay(200);
+        digitalWrite(relay,LOW);
+        lastTime = currTimeArduino;
+        break;
+     }
+  }
+}
+ 
